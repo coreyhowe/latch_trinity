@@ -9,21 +9,16 @@ import os
 from latch import small_task, large_task, workflow
 from latch.types import LatchFile, LatchDir
 
-@large_task
-def assemble_task(read1: LatchFile, read2: LatchFile, output_dir: LatchDir) -> LatchFile:
 
-	#output_prefix = "trinity"
-	#trinity_out_dir/Trinity.fasta
+@small_task
+def assemble_task(read1: LatchFile, read2: LatchFile, output_dir: LatchDir) -> (LatchFile, LatchFile):
 
-	# directory of output
-	local_dir = "/root/trinity_out_dir" 
 	
+	out_basename = str(output_dir.remote_path)
+	transcripts = "/root/trinity_out_dir.Trinity.fasta"
+	map = "/root/trinity_out_dir.Trinity.fasta.gene_trans_map"
 	
-	#transcripts = "/root/trinity_out_dir/Trinity.fasta"
-	transcripts = Path("trinity_out_dir/Trinity.fasta").resolve()
 
-	# 
-	#local_prefix = os.path.join(local_dir, output_prefix)
 
 	# command
 	_trinity_cmd = [
@@ -35,21 +30,20 @@ def assemble_task(read1: LatchFile, read2: LatchFile, output_dir: LatchDir) -> L
         "--right",
         read2.local_path,
         "--max_memory",
-        "200G"
+        "200G",
+        "--full_cleanup"
         ]
-        #"--output",
-       # "trinity_output",
-		#]
 
 	subprocess.run(_trinity_cmd)
 	
-	print (transcripts)
-
-	return LatchFile(transcripts, output_dir.remote_path)
-	#return LatchDir(local_dir, output_dir.remote_path)
+	
+	return (LatchFile(transcripts, 
+	f"{out_basename}/trinity_out_dir.Trinity.fasta"),
+	LatchFile(map, 
+	f"{out_basename}/trinity_out_dir.Trinity.fasta.gene_trans_map"))
 
 @workflow
-def trinity(read1: LatchFile, read2: LatchFile, output_dir: LatchDir) -> LatchFile:
+def trinity(read1: LatchFile, read2: LatchFile, output_dir: LatchDir) -> (LatchFile, LatchFile):
     """
 
 	# De novo Transcriptome Assembly
@@ -107,6 +101,7 @@ def trinity(read1: LatchFile, read2: LatchFile, output_dir: LatchDir) -> LatchFi
           __metadata__:
             display_name: Output Directory
     """
+    
     return assemble_task(read1=read1, read2=read2, output_dir=output_dir)
     
     
